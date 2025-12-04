@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
 /*
@@ -128,7 +127,7 @@ func receiveMessages(conn net.Conn, done chan bool) {
 
 		// 设置读取超时，避免阻塞太久
 		// 这样可以定期检查 done channel
-		conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+		//conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 		// 从服务器读取消息
 		message, err := reader.ReadString('\n')
 		if err != nil {

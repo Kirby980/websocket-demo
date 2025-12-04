@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 )
 
 /*
@@ -87,7 +88,11 @@ func main() {
 // handleClient 处理单个客户端的连接
 func handleClient(conn net.Conn) {
 	reader := bufio.NewReader(conn)
-	name, _ := reader.ReadString('\n')
+	name, err := reader.ReadString('\n')
+	if err != nil {
+		conn.Close()
+		return
+	}
 	atomic.AddInt32(&clientCounter, 1)
 
 	// 创建客户端对象
@@ -137,13 +142,17 @@ func handleClient(conn net.Conn) {
 	}()
 
 	// 循环读取客户端消息
-	reader = bufio.NewReader(conn)
+	//reader = bufio.NewReader(conn)
 	//reader := bufio.NewReaderSize(conn, 5)
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
 			// 客户端断开连接
 			return
+		}
+		if utf8.RuneCountInString(message) > 100 {
+			client.sendMessage("消息长度超过100个字符\n")
+			continue
 		}
 
 		// 去除首尾空白字符
@@ -225,6 +234,10 @@ func cmd(message string, client *Client) {
 		found := false
 		if ok && cmd == "to" {
 			index := strings.Index(nameAndMsg, " ")
+			if index == -1 {
+				client.sendMessage("格式错误，请使用: to <用户名> <消息>\n")
+				return
+			}
 			newClients.Range(func(key, value any) bool {
 				c := key.(*Client)
 				if c.name == nameAndMsg[:index] {
