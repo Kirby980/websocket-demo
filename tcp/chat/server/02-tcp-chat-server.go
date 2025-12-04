@@ -151,12 +151,7 @@ func handleClient(conn net.Conn) {
 		if message == "" {
 			continue
 		}
-
-		// 打印到服务器控制台
-		fmt.Printf("[%s] %s: %s\n", getCurrentTime(), client.name, message)
-
-		// 【关键点4】广播消息给所有其他客户端
-		broadcast(fmt.Sprintf("%s: %s\n", client.name, message), client)
+		cmd(message, client)
 	}
 }
 
@@ -212,8 +207,50 @@ func getCurrentTime() string {
 	return time.Now().Format("15:04:05")
 }
 
-/*
-【知识点总结】
+func cmd(message string, client *Client) {
+	switch message {
+	case "help":
+		client.sendMessage(fmt.Sprintln("可用命令：\n- help: 显示帮助\n- list: 列出在聊天室的人\n- 任意消息: 发送消息\n- to xxx: 给xxx发送消息"))
+	case "list":
+		names := make([]string, 0)
+		newClients.Range(func(key, value any) bool {
+			c := key.(*Client)
+			names = append(names, c.name)
+			return true
+		})
+		fmt.Printf("%s查询了当前聊天室的用户名称都有谁：%s\n", client.name, strings.Join(names, ","))
+		client.sendMessage(fmt.Sprintf("%s查询了当前聊天室的用户名称都有谁：%s\n", client.name, strings.Join(names, ",")))
+	default:
+		cmd, nameAndMsg, ok := strings.Cut(message, " ")
+		found := false
+		if ok && cmd == "to" {
+			index := strings.Index(nameAndMsg, " ")
+			newClients.Range(func(key, value any) bool {
+				c := key.(*Client)
+				if c.name == nameAndMsg[:index] {
+					c.sendMessage(fmt.Sprintf("%s: %s\n", client.name, nameAndMsg[index+1:]))
+					fmt.Printf("%s给%s发送了消息:%s", client.name, nameAndMsg[:index], nameAndMsg[index+1:])
+					found = true
+					return false
+				}
+				return true
+			})
+			if found {
+				return
+			}
+			fmt.Printf("%s给%s发送了消息:%s,但是%s不在线", client.name, nameAndMsg[:index], nameAndMsg[index+1:], nameAndMsg[:index])
+			client.sendMessage(fmt.Sprintf("用户 %s 不在线\n", nameAndMsg[:index]))
+			return
+		}
+		// 打印到服务器控制台
+		fmt.Printf("[%s] %s: %s\n", getCurrentTime(), client.name, message)
+
+		// 【关键点4】广播消息给所有其他客户端
+		broadcast(fmt.Sprintf("%s: %s\n", client.name, message), client)
+	}
+}
+
+/*【知识点总结】
 
 1. goroutine 实现并发：
    - 每个客户端连接在独立的 goroutine 中处理
