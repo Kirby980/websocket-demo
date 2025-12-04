@@ -229,13 +229,14 @@ func cmd(message string, client *Client) {
 				c := key.(*Client)
 				if c.name == nameAndMsg[:index] {
 					c.sendMessage(fmt.Sprintf("%s: %s\n", client.name, nameAndMsg[index+1:]))
-					fmt.Printf("%s给%s发送了消息:%s", client.name, nameAndMsg[:index], nameAndMsg[index+1:])
 					found = true
 					return false
 				}
 				return true
 			})
 			if found {
+				fmt.Printf("%s给%s发送了一条私聊消息\n", client.name, nameAndMsg[:index])
+				client.sendMessage(fmt.Sprintf("已发送私聊给 %s\n", nameAndMsg[:index]))
 				return
 			}
 			fmt.Printf("%s给%s发送了消息:%s,但是%s不在线", client.name, nameAndMsg[:index], nameAndMsg[index+1:], nameAndMsg[:index])
